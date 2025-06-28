@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 N8N Workflow Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            line-height: 1.5;
+            transition: all 0.3s ease;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .endpoint-section {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .endpoint-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: white;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .result-header {
+            padding: 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .result-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-templates {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .result-content {
+            padding: 20px;
+        }
+
+        .template-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .template-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .template-item:hover {
+            border-color: #4f46e5;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+        }
+
+        .template-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .template-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .template-description {
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+
+        .workflow-json {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin-top: 15px;
+        }
+
+        .copy-btn {
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #4b5563;
+        }
+
+        .steps-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .steps-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+        }
+
+        .steps-list li:last-child {
+            border-bottom: none;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .examples {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+
+        .examples h4 {
+            color: #0369a1;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .examples ul {
+            color: #0c4a6e;
+            font-size: 0.85rem;
+            padding-left: 20px;
+        }
+
+        .examples li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .main-content {
+                padding: 30px 20px;
+            }
+            
+            .template-meta {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 N8N Workflow Generator</h1>
+            <p>Erstelle automatisch perfekte N8N Workflows mit KI-Power</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="input-section">
+                <div class="endpoint-section">
+                    <div class="input-group">
+                        <label for="webhook-url">🔗 N8N Webhook URL</label>
+                        <input 
+                            type="url" 
+                            id="webhook-url" 
+                            class="endpoint-input"
+                            placeholder="https://your-n8n-instance.com/webhook/workflow-generator"
+                            value="https://n8n.hr-applab.de:5678/webhook/workflow-builder"
+                        >
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="workflow-request">📝 Beschreibe deinen gewünschten Workflow</label>
+                    <textarea 
+                        id="workflow-request" 
+                        placeholder="Beschreibe hier detailliert welchen Workflow du erstellen möchtest...
+
+Beispiel: 'Erstelle einen Workflow der automatisch meine Slack-Nachrichten analysiert, wichtige Informationen in einer Airtable-Datenbank speichert und mir täglich eine Zusammenfassung per E-Mail sendet.'"
+                    ></textarea>
+                    
+                    <div class="examples">
+                        <h4>💡 Beispiel-Anfragen:</h4>
+                        <ul>
+                            <li>Automatische Gmail E-Mail Beantwortung mit Google Docs Knowledge Base</li>
+                            <li>Instagram Posts automatisch zu Twitter weiterleiten</li>
+                            <li>Neue Shopify Bestellungen in Slack-Channel posten</li>
+                            <li>GitHub Issues in Notion-Datenbank synchronisieren</li>
+                            <li>Tägliche Webscraping-Berichte per Telegram</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <button class="generate-btn" onclick="generateWorkflow()">
+                    ✨ Workflow Generieren
+                </button>
+            </div>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>🔍 Suche nach passenden Templates...</p>
+                <p style="font-size: 0.9rem; margin-top: 5px;">Dies kann 30-60 Sekunden dauern</p>
+            </div>
+            
+            <div class="result-section" id="result-section">
+                <!-- Hier werden die Ergebnisse angezeigt -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentWorkflowData = null;
+
+        async function generateWorkflow() {
+            const webhookUrl = document.getElementById('webhook-url').value;
+            const request = document.getElementById('workflow-request').value;
+            
+            if (!webhookUrl || !request) {
+                alert('Bitte fülle alle Felder aus!');
+                return;
+            }
+            
+            // UI Updates
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-section').style.display = 'none';
+            document.querySelector('.generate-btn').disabled = true;
+            
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: request,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                currentWorkflowData = data;
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('Detailed Error:', error);
+                
+                // Erweiterte Fehlerbehandlung
+                let errorMessage = error.message;
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage = `
+                        Verbindungsfehler: ${error.message}
+                        
+                        Mögliche Lösungen:
+                        1. CORS-Header in N8N Webhook hinzufügen
+                        2. Browser mit --disable-web-security starten
+                        3. Datei von einem Webserver servieren (nicht file://)
+                        4. N8N Workflow ist nicht aktiv/erreichbar
+                        
+                        Test-URL: ${webhookUrl}
+                    `;
+                }
+                
+                displayError(errorMessage);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.querySelector('.generate-btn').disabled = false;
+            }
+        }
+        
+        function displayResults(data) {
+            const resultSection = document.getElementById('result-section');
+            
+            if (data.status === 'templates_found') {
+                resultSection.innerHTML = `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-status status-templates">📚 Templates gefunden</div>
+                            <h3>${data.message}</h3>
+                        </div>
+                        <div class="result-content">
+                            <p><strong>Deine Anfrage:</strong> ${data.user_request}</p>
+                            <div class="template-list">
+                                ${data.templates.map(template => `
+                                    <div class="template-item">
+                                        <div class="template-title">${template.name}</div>
+                                        <div class="template-meta">
+                                            <span>📊 ${template.similarity} Match</span>
+                                            <span>⚡ ${template.complexity}</span>
+                                            <span>🔧 ${template.node_count} Nodes</span>
+                                            <span>⏱️ ${template.estimated_setup_time}</span>
+                                        </div>
+                                        <div class="template-description">${template.description}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <h4 style="margin-top: 20px; margin-bottom: 10px;">📋 Nächste Schritte:</h4>
+                            <ol class="steps-list">
+                                ${data.next_steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            } else if (data.status === 'workflow_created') {
+                resultSection.innerHTML = `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div class="result-status status-success">✅ Workflow erstellt</div>
+                            <h3>${data.message}</h3>
+                        </div>
+                        <div class="result-content">
+                            <p><strong>Deine Anfrage:</strong> ${data.user_request}</p>
+                            
+                            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                                <h4>📊 Workflow Info:</h4>
+                                <p><strong>Name:</strong> ${data.workflow_info.title}</p>
+                                <p><strong>Komplexität:</strong> ${data.workflow_info.complexity}</p>
+                                <p><strong>Anzahl Nodes:</strong> ${data.workflow_info.node_count}</p>
+                                <p><strong>Setup-Zeit:</strong> ${data.workflow_info.estimated_setup_time}</p>
+                                <p><strong>Services:</strong> ${Array.isArray(data.workflow_info.node_types) ? data.workflow_info.node_types.join(', ') : data.workflow_info.node_types}</p>
+                            </div>
+                            
+                            <h4>📋 Import-Anweisungen:</h4>
+                            <ol class="steps-list">
+                                ${data.next_steps.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                            
+                            <h4 style="margin-top: 20px;">📄 Workflow JSON:</h4>
+                            <div class="workflow-json" id="workflow-json">${JSON.stringify(data.workflow_json, null, 2)}</div>
+                            <button class="copy-btn" onclick="copyWorkflowJSON()">📋 JSON kopieren</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultSection.style.display = 'block';
+        }
+        
+        function displayError(errorMessage) {
+            const resultSection = document.getElementById('result-section');
+            resultSection.innerHTML = `
+                <div class="error-message">
+                    <h4>❌ Fehler beim Generieren</h4>
+                    <p>${errorMessage}</p>
+                    <p style="margin-top: 10px; font-size: 0.9rem;">
+                        Überprüfe deine Webhook-URL und stelle sicher, dass dein N8N Workflow läuft.
+                    </p>
+                </div>
+            `;
+            resultSection.style.display = 'block';
+        }
+        
+        function copyWorkflowJSON() {
+            const jsonElement = document.getElementById('workflow-json');
+            const textToCopy = jsonElement.textContent;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Kopiert!';
+                btn.style.background = '#10b981';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '#374151';
+                }, 2000);
+            }).catch(err => {
+                console.error('Kopieren fehlgeschlagen:', err);
+                alert('Kopieren fehlgeschlagen. Bitte manuell markieren und kopieren.');
+            });
+        }
+        
+        // Enter-Taste im Textarea abfangen
+        document.getElementById('workflow-request').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                generateWorkflow();
+            }
+        });
+        
+        // Beispiel-Text beim Klick einfügen
+        document.querySelectorAll('.examples li').forEach(item => {
+            item.style.cursor = 'pointer';
+            item.addEventListener('click', function() {
+                document.getElementById('workflow-request').value = this.textContent;
+            });
+        });
+    </script>
+</body>
+</html>
