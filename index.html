@@ -543,20 +543,104 @@ Beispiel: 'Erstelle einen Workflow der automatisch meine Slack-Nachrichten analy
             const jsonElement = document.getElementById('workflow-json');
             const textToCopy = jsonElement.textContent;
             
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '✅ Kopiert!';
-                btn.style.background = '#10b981';
+            // Fallback-Methoden für das Kopieren
+            const copyMethods = [
+                // Methode 1: Modern Clipboard API
+                () => navigator.clipboard.writeText(textToCopy),
                 
+                // Methode 2: Textarea Selection (Fallback)
+                () => {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = textToCopy;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    textarea.setSelectionRange(0, 99999);
+                    const success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    if (!success) throw new Error('execCommand failed');
+                    return Promise.resolve();
+                }
+            ];
+            
+            // Probiere die Methoden nacheinander
+            async function tryCopy() {
+                for (let i = 0; i < copyMethods.length; i++) {
+                    try {
+                        await copyMethods[i]();
+                        // Erfolg - UI Update
+                        const btn = event.target;
+                        const originalText = btn.textContent;
+                        btn.textContent = '✅ Kopiert!';
+                        btn.style.background = '#10b981';
+                        
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.background = '#374151';
+                        }, 2000);
+                        return;
+                    } catch (err) {
+                        console.log(`Copy method ${i + 1} failed:`, err);
+                        continue;
+                    }
+                }
+                
+                // Alle Methoden fehlgeschlagen - zeige manuellen Download
+                showManualCopyOption(textToCopy);
+            }
+            
+            tryCopy();
+        }
+        
+        function showManualCopyOption(jsonText) {
+            // Erstelle Download-Button als Alternative
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            // Erstelle temporären Download-Link
+            const blob = new Blob([jsonText], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = 'n8n-workflow.json';
+            downloadLink.style.display = 'none';
+            document.body.appendChild(downloadLink);
+            
+            // Button zu Download umwandeln
+            btn.textContent = '💾 Als Datei herunterladen';
+            btn.style.background = '#2563eb';
+            btn.onclick = function() {
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                URL.revokeObjectURL(url);
+                
+                // Button zurücksetzen
                 setTimeout(() => {
                     btn.textContent = originalText;
                     btn.style.background = '#374151';
-                }, 2000);
-            }).catch(err => {
-                console.error('Kopieren fehlgeschlagen:', err);
-                alert('Kopieren fehlgeschlagen. Bitte manuell markieren und kopieren.');
-            });
+                    btn.onclick = copyWorkflowJSON;
+                }, 1000);
+            };
+            
+            // Zusätzlich Textarea mit vorselektiertem Text anzeigen
+            const container = btn.parentElement;
+            const manualCopyDiv = document.createElement('div');
+            manualCopyDiv.innerHTML = `
+                <p style="margin: 10px 0; color: #dc2626; font-size: 0.9rem;">
+                    ⚠️ Automatisches Kopieren fehlgeschlagen. Verwende eine der Alternativen:
+                </p>
+                <textarea 
+                    readonly 
+                    style="width: 100%; height: 100px; margin: 10px 0; padding: 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-family: monospace; font-size: 0.8rem;"
+                    onclick="this.select()"
+                    placeholder="JSON wird hier angezeigt..."
+                >${jsonText.substring(0, 500)}... (gekürzt - verwende Download-Button)</textarea>
+                <p style="margin: 10px 0; color: #6b7280; font-size: 0.85rem;">
+                    💡 Klicke in das Textfeld und drücke Strg+A, dann Strg+C
+                </p>
+            `;
+            container.appendChild(manualCopyDiv);
         }
         
         // Enter-Taste im Textarea abfangen
